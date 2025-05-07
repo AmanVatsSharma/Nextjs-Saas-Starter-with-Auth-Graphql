@@ -29,7 +29,7 @@ const schema = createSchema({
 
 const Yoga = createYoga({
   schema,
-});
+}); 
 
 export default Yoga;
  
