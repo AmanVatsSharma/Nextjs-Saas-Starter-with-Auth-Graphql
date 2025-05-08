@@ -38,7 +38,7 @@ const schema = createSchema({
 
 const server = createServer({
   schema,
-});
+});  
 
 export default server;
  
