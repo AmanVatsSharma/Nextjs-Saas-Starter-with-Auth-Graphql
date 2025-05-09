@@ -27,7 +27,7 @@ const schema = createSchema({
       products: async () => await prisma.product.findMany(),
     },
     Mutation: {
-      createProduct: async (_parent, args) => {
+      createProduct: async (_parent:any, args:any) => {
         return await prisma.product.create({
           data: { name: args.name },
         });
