@@ -1,5 +1,5 @@
 import { createSchema } from "@pothos/core";
-import { createServer } from "graphql-yoga";
+import { createYoga } from "graphql-yoga";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -36,7 +36,7 @@ const schema = createSchema({
   },
 });
 
-const server = createServer({
+const server = createYoga({
   schema,
 });  
 
