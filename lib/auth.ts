@@ -85,6 +85,183 @@ export class AuthService {
       return null;
     }
   }
- 
+
+  // ============================================================================
+  // AUTHENTICATION
+  // ============================================================================
+
+  async hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(12);
+    return bcrypt.hash(password, salt);
+  }
+
+  async verifyPassword(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+  }
+
+  async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
+    // Rate limiting check
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: {
+        currentOrganization: {
+          include: {
+            organizationUsers: {
+              where: { userId: { equals: undefined } }, // Will be set after we get the user
+              include: { user: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+
+    // Check if account is locked
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new Error('Account is temporarily locked due to too many failed login attempts');
+    }
+
+    // Check if user is active and verified
+    if (!user.isActive) {
+      throw new Error('Account is deactivated');
+    }
+
+    if (user.isSuspended) {
+      throw new Error('Account is suspended');
+    }
+
+    if (!user.isVerified) {
+      throw new Error('Please verify your email address');
+    }
+
+    // Verify password
+    if (!user.passwordHash || !(await this.verifyPassword(password, user.passwordHash))) {
+      // Increment failed login attempts
+      await this.incrementFailedLogins(user.id);
+      throw new Error('Invalid credentials');
+    }
+
+    // Reset failed login attempts on successful login
+    await this.resetFailedLogins(user.id);
+
+    // Get organization membership
+    const orgMembership = user.currentOrganizationId 
+      ? await this.prisma.organizationUser.findUnique({
+          where: {
+            userId_organizationId: {
+              userId: user.id,
+              organizationId: user.currentOrganizationId
+            }
+          }
+        })
+      : null;
+
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
+      isActive: user.isActive,
+      isVerified: user.isVerified,
+      currentOrganizationId: user.currentOrganizationId || undefined,
+      organizationRole: orgMembership?.role,
+      permissions: orgMembership?.permissions,
+    };
+
+    // Create session
+    const session = await this.createSession(user.id, ipAddress, userAgent);
+
+    // Update last login
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() }
+    });
+
+    // Log audit event
+    await this.logAuditEvent(user.id, user.currentOrganizationId, 'LOGIN', 'User', user.id, {
+      ipAddress,
+      userAgent
+    });
+
+    return {
+      user: authUser,
+      accessToken: this.generateAccessToken(authUser),
+      refreshToken: this.generateRefreshToken(user.id),
+      session,
+    };
+  }
+
+  async register(data: {
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    organizationName?: string;
+  }) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: data.email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      throw new Error('User already exists');
+    }
+
+    const passwordHash = await this.hashPassword(data.password);
+
+    // Create user and organization in transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          email: data.email.toLowerCase(),
+          passwordHash,
+          firstName: data.firstName,
+          lastName: data.lastName,
+        }
+      });
+
+      // Create organization if provided
+      let organization = null;
+      if (data.organizationName) {
+        const slug = data.organizationName.toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+
+        organization = await tx.organization.create({
+          data: {
+            name: data.organizationName,
+            slug: `${slug}-${crypto.randomBytes(4).toString('hex')}`,
+          }
+        });
+
+        // Add user as organization owner
+        await tx.organizationUser.create({
+          data: {
+            userId: user.id,
+            organizationId: organization.id,
+            role: OrganizationRole.OWNER,
+            permissions: Object.values(OrganizationPermission),
+          }
+        });
+
+        // Set as current organization
+        await tx.user.update({
+          where: { id: user.id },
+          data: { currentOrganizationId: organization.id }
+        });
+      }
+
+      return { user, organization };
+    });
+
+    // Send verification email
+    await this.sendVerificationEmail(result.user.email);
+
+    return result;
+  }
 
 }
