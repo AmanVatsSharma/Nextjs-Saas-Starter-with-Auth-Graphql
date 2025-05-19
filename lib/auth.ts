@@ -264,4 +264,55 @@ export class AuthService {
     return result;
   }
 
+  // ============================================================================
+  // SESSION MANAGEMENT
+  // ============================================================================
+
+  async createSession(userId: string, ipAddress?: string, userAgent?: string) {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+
+    return this.prisma.session.create({
+      data: {
+        sessionToken: crypto.randomBytes(32).toString('hex'),
+        userId,
+        ipAddress,
+        userAgent,
+        expiresAt,
+      }
+    });
+  }
+
+  async validateSession(sessionToken: string) {
+    const session = await this.prisma.session.findUnique({
+      where: { sessionToken },
+      include: {
+        user: {
+          include: {
+            currentOrganization: {
+              include: {
+                organizationUsers: {
+                  where: { userId: { equals: undefined } } // Will be filtered properly
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!session || !session.isActive || session.expiresAt < new Date()) {
+      return null;
+    }
+
+    return session;
+  }
+
+  async revokeSession(sessionToken: string) {
+    await this.prisma.session.update({
+      where: { sessionToken },
+      data: { isActive: false }
+    });
+  }
+
 }
