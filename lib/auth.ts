@@ -315,4 +315,52 @@ export class AuthService {
     });
   }
 
+  // ============================================================================
+  // ORGANIZATION & MULTI-TENANCY
+  // ============================================================================
+
+  async switchOrganization(userId: string, organizationId: string) {
+    // Verify user is member of organization
+    const membership = await this.prisma.organizationUser.findUnique({
+      where: {
+        userId_organizationId: {
+          userId,
+          organizationId
+        }
+      },
+      include: {
+        organization: true
+      }
+    });
+
+    if (!membership || !membership.isActive) {
+      throw new Error('Not a member of this organization');
+    }
+
+    // Update current organization
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { currentOrganizationId: organizationId }
+    });
+
+    return membership.organization;
+  }
+
+  async getUserPermissions(userId: string, organizationId: string) {
+    const membership = await this.prisma.organizationUser.findUnique({
+      where: {
+        userId_organizationId: {
+          userId,
+          organizationId
+        }
+      }
+    });
+
+    return {
+      role: membership?.role,
+      permissions: membership?.permissions || [],
+      isActive: membership?.isActive || false,
+    };
+  }
+
 }
