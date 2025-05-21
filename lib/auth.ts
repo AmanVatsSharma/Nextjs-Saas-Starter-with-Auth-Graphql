@@ -363,4 +363,77 @@ export class AuthService {
     };
   }
 
+  // ============================================================================
+  // UTILITIES
+  // ============================================================================
+
+  private async incrementFailedLogins(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { loginAttempts: true }
+    });
+
+    const attempts = (user?.loginAttempts || 0) + 1;
+    const lockUntil = attempts >= 5 
+      ? new Date(Date.now() + 15 * 60 * 1000) // Lock for 15 minutes
+      : undefined;
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        loginAttempts: attempts,
+        lockedUntil: lockUntil
+      }
+    });
+  }
+
+  private async resetFailedLogins(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        loginAttempts: 0,
+        lockedUntil: null
+      }
+    });
+  }
+
+  private async sendVerificationEmail(email: string) {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours
+
+    await this.prisma.verificationToken.create({
+      data: {
+        email,
+        token,
+        type: 'EMAIL_VERIFICATION',
+        expiresAt
+      }
+    });
+
+    // TODO: Send email with verification link
+    console.log(`Verification email sent to ${email} with token: ${token}`);
+  }
+
+  private async logAuditEvent(
+    userId: string,
+    organizationId: string | null,
+    action: string,
+    resource: string,
+    resourceId: string,
+    metadata: any = {}
+  ) {
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        organizationId,
+        action,
+        resource,
+        resourceId,
+        metadata,
+        ipAddress: metadata.ipAddress,
+        userAgent: metadata.userAgent,
+      }
+    });
+  }
 }
