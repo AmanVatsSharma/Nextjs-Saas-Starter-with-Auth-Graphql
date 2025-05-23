@@ -24,8 +24,8 @@ export default function rateLimit(options: RateLimitOptions) {
       const currentTime = Date.now();
       const windowStart = currentTime - options.interval;
 
-      // Remove old timestamps
-      const validRequests = tokenCount.filter(time => time > windowStart);
+      // Remove old timestamps  
+      const validRequests = tokenCount.filter(time => time > windowStart); 
       
       if (validRequests.length >= limit) {
         const oldestRequest = Math.min(...validRequests);
