@@ -8,7 +8,7 @@ export interface RateLimitOptions {
 export interface RateLimitResult {
   success: boolean;
   limit: number;
-  remaining: number;
+  remaining: number;   
   reset: number;
 }
 
