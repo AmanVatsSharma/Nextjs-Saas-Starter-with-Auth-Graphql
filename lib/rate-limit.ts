@@ -17,7 +17,7 @@ export default function rateLimit(options: RateLimitOptions) {
     max: options.uniqueTokenPerInterval || 500,
     ttl: options.interval || 60000,
   });
-
+ 
   return {
     check: async (limit: number, token: string): Promise<RateLimitResult> => {
       const tokenCount = (tokenCache.get(token) as number[]) || [0];
