@@ -27,7 +27,7 @@ export default function rateLimit(options: RateLimitOptions) {
       // Remove old timestamps  
       const validRequests = tokenCount.filter(time => time > windowStart); 
       
-      if (validRequests.length >= limit) {
+      if (validRequests.length >= limit) { 
         const oldestRequest = Math.min(...validRequests);
         const resetTime = oldestRequest + options.interval;
         
