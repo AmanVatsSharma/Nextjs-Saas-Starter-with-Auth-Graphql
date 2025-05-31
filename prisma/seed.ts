@@ -20,7 +20,7 @@ async function main() {
   await prisma.verificationToken.deleteMany();
   await prisma.user.deleteMany();
 
-  // Create subscription plans
+  // Create subscription plans 
   const plans = await Promise.all([
     prisma.plan.create({
       data: {
