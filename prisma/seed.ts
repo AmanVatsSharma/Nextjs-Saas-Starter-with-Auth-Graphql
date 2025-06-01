@@ -24,7 +24,7 @@ async function main() {
   const plans = await Promise.all([
     prisma.plan.create({
       data: {
-        name: 'Starter', 
+        name: 'Starter',  
         description: 'Perfect for individuals and small teams',
         price: 0,
         currency: 'USD',
