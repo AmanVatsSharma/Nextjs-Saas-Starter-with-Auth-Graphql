@@ -348,5 +348,5 @@ query GetProjects {
         // TODO: Send to error tracking service (Sentry, etc.)
       },
     },
-  ],
+  ], 
 }); 
