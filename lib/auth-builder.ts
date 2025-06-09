@@ -355,7 +355,7 @@ export const withResourceAuth = {
     
     canDelete: (projectId: string) => ({
       authScopes: {
-        authenticated: true,
+        authenticated: true,  
         canDeleteResource: async (root: any, args: any, ctx: SaaSContext) => {
           const resourceGuards = new (await import('./auth-middleware')).ResourceGuards(ctx.prisma);
           return resourceGuards.canDeleteProject(ctx.user!.id, projectId);

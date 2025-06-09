@@ -476,7 +476,7 @@ export class SubscriptionGuards {
     const subscription = await this.prisma.subscription.findFirst({
       where: { organizations: { some: { id: organizationId } } },
     });
-
+  
     if (subscription) {
       const currentUsage = (subscription.usageData as any) || {};
       currentUsage[resource] = (currentUsage[resource] || 0) + amount;
