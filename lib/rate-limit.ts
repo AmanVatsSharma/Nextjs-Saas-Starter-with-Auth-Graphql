@@ -10,7 +10,7 @@ export interface RateLimitResult {
   limit: number;
   remaining: number;   
   reset: number;
-} 
+}  
 
 export default function rateLimit(options: RateLimitOptions) {
   const tokenCache = new LRUCache({

@@ -351,7 +351,7 @@ export class AuthService {
       where: {
         userId_organizationId: {
           userId,
-          organizationId
+          organizationId 
         }
       }
     });

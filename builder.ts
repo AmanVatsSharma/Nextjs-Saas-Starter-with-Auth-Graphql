@@ -19,7 +19,7 @@ export interface Context {
 export const builder = new SchemaBuilder<{
   PrismaTypes: PrismaTypes;
   Context: Context;
-  AuthScopes: {
+  AuthScopes: { 
     authenticated: boolean;
     admin: boolean;
     owner: boolean;
