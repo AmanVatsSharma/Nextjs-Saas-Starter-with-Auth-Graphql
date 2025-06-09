@@ -10,7 +10,7 @@ import * as Objects from './generated/objects';
 
 export interface Context {
   prisma: PrismaClient;
-  user?: {
+  user?: { 
     id: string;
     role: string;
   };

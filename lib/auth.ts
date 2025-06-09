@@ -359,7 +359,7 @@ export class AuthService {
     return {
       role: membership?.role,
       permissions: membership?.permissions || [],
-      isActive: membership?.isActive || false,
+      isActive: membership?.isActive || false, 
     };
   }
 
