@@ -13,7 +13,7 @@ export interface Context {
   user?: { 
     id: string;
     role: string;
-  };
+  }; 
 }
 
 export const builder = new SchemaBuilder<{
